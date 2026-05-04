@@ -58,7 +58,7 @@ namespace Relatorio.Reporting
             sb.AppendLine("<html lang='pt-br'>");
             sb.AppendLine("<head>");
             sb.AppendLine("    <meta charset='UTF-8'>");
-            sb.AppendLine("    <title>Relatório de Dados - Firebird Reporter</title>");
+            sb.AppendLine("    <title>Relatório de Dados - Universal Data Reporter</title>");
             sb.AppendLine("    <style>");
             sb.AppendLine("        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1E1E1E; color: #D4D4D4; margin: 40px; }");
             sb.AppendLine("        h1 { color: #FFFFFF; border-bottom: 2px solid #007ACC; padding-bottom: 10px; margin-bottom: 30px; }");
@@ -145,7 +145,7 @@ namespace Relatorio.Reporting
             }
 
             sb.AppendLine("    <div class='footer'>");
-            sb.AppendLine("        Firebird Data Reporter - Gerado Automaticamente");
+            sb.AppendLine("        Universal Data Reporter - Gerado Automaticamente");
             sb.AppendLine("    </div>");
             sb.AppendLine("</body>");
             sb.AppendLine("</html>");
@@ -250,7 +250,7 @@ namespace Relatorio.Reporting
                     {
                         row.RelativeItem().Column(col =>
                         {
-                            col.Item().Text("Relatório de Dados - Firebird Reporter").FontSize(18).Bold().FontColor(Colors.Blue.Medium);
+                            col.Item().Text("Relatório de Dados - Universal Data Reporter").FontSize(18).Bold().FontColor(Colors.Blue.Medium);
                             col.Item().Text($"Gerado em: {DateTime.Now}").FontSize(8).FontColor(Colors.Grey.Medium);
                         });
                     });

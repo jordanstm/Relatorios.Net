@@ -1,11 +1,11 @@
-﻿<Window x:Class="Relatorio.MainWindow"
+<Window x:Class="Relatorio.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Relatorio.ViewModels"
         mc:Ignorable="d"
-        Title="Firebird Data Reporter - Dark Edition" Height="700" Width="1100"
+        Title="Universal Data Reporter - Dark Edition" Height="700" Width="1100"
         Background="#1E1E1E" Foreground="White"
         Icon="/app_icon.png">
     <Window.DataContext>
@@ -125,12 +125,16 @@
         <Border Grid.Column="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
             <DockPanel Margin="15">
                 <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="CONEXÃO FIREBIRD" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    <TextBlock Text="CONFIGURAÇÃO DE BANCO" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
                     
+                    <TextBlock Text="Tipo de Banco:"/>
+                    <ComboBox ItemsSource="{Binding DbTypes}" SelectedItem="{Binding SelectedDbType}" 
+                              Margin="0,2,0,8" Background="#2D2D2D" Foreground="White" BorderBrush="#3F3F46"/>
+
                     <TextBlock Text="Host / Servidor:"/>
                     <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="Caminho do Banco:"/>
+                    <TextBlock Text="Caminho do Banco / Serviço:"/>
                     <TextBox Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Text="Usuário:"/>

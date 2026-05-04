@@ -1,6 +1,6 @@
 # Firebird Data Reporter 📊
 
-Um gerador de relatórios dinâmico e visual para bancos de dados **Firebird**, desenvolvido em **C# / WPF** com **.NET 10**.
+Um gerador de relatórios dinâmico e visual para bancos de dados **Firebird, SQL Server e Oracle**, desenvolvido em **C# / WPF** com **.NET 10**.
 
 ## ✨ Funcionalidades
 

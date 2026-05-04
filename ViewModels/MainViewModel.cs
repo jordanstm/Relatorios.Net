@@ -32,6 +32,11 @@ namespace Relatorio.ViewModels
         private string _password = "masterkey";
         public string Password { get => _password; set { _password = value; OnPropertyChanged(); } }
 
+        private DatabaseType _selectedDbType = DatabaseType.Firebird;
+        public DatabaseType SelectedDbType { get => _selectedDbType; set { _selectedDbType = value; OnPropertyChanged(); } }
+
+        public IEnumerable<DatabaseType> DbTypes => Enum.GetValues(typeof(DatabaseType)).Cast<DatabaseType>();
+
         private string _sqlQuery = @"-- BUSCA GLOBAL DE COLUNAS (Ex: NCM)
 SELECT 
     RDB$RELATION_NAME AS TABELA, 
@@ -59,7 +64,7 @@ ORDER BY 1";
             } 
         }
 
-        private DbConnectionManager? _dbManager;
+        private IDbService? _dbService;
         private ReportGenerator _reportGenerator = new ReportGenerator();
         private const string ConfigFile = "connection.json";
 
@@ -125,15 +130,12 @@ ORDER BY 1";
             try
             {
                 ErrorMessage = "";
-                _dbManager = new DbConnectionManager(Host, Database, User, Password);
+                _dbService?.Dispose();
+                _dbService = DbServiceFactory.CreateService(SelectedDbType, Host, Database, User, Password);
                 
-                using (var conn = _dbManager.CreateConnection())
-                {
-                    conn.Open();
-                    var tables = conn.GetTables();
-                    AvailableTables.Clear();
-                    foreach (var t in tables) AvailableTables.Add(new TableSchema { Name = t });
-                }
+                var tables = _dbService.GetTables();
+                AvailableTables.Clear();
+                foreach (var t in tables) AvailableTables.Add(new TableSchema { Name = t });
 
                 SaveConnectionConfig();
             }
@@ -164,6 +166,7 @@ ORDER BY 1";
             {
                 var config = new ConnectionConfig
                 {
+                    DbType = SelectedDbType,
                     Host = Host,
                     Database = Database,
                     User = User,
@@ -187,6 +190,7 @@ ORDER BY 1";
                     var config = JsonSerializer.Deserialize<ConnectionConfig>(json);
                     if (config != null)
                     {
+                        SelectedDbType = config.DbType;
                         Host = config.Host;
                         Database = config.Database;
                         User = config.User;
@@ -206,27 +210,24 @@ ORDER BY 1";
         {
             if (!SelectedTables.Contains(table))
             {
-                if (_dbManager != null)
+                if (_dbService != null)
                 {
-                    using (var conn = _dbManager.CreateConnection())
+                    var cols = _dbService.GetColumns(table.Name);
+                    table.Columns.Clear();
+                    foreach (var c in cols) 
                     {
-                        var cols = conn.GetColumns(table.Name);
-                        table.Columns.Clear();
-                        foreach (var c in cols) 
+                        var col = new ColumnSchema { Name = c.Name, DataType = c.DataType, IsSelected = false };
+                        col.PropertyChanged += (sc, ec) => 
                         {
-                            var col = new ColumnSchema { Name = c.Name, DataType = c.DataType, IsSelected = false };
-                            col.PropertyChanged += (sc, ec) => 
+                            if (ec.PropertyName == nameof(ColumnSchema.IsGroupedBy) && col.IsGroupedBy)
                             {
-                                if (ec.PropertyName == nameof(ColumnSchema.IsGroupedBy) && col.IsGroupedBy)
-                                {
-                                    foreach (var otherCol in table.Columns.Where(oc => oc != col))
-                                        otherCol.IsGroupedBy = false;
-                                }
-                            };
-                            table.Columns.Add(col);
-                        }
-                        table.ColumnsView?.Refresh();
+                                foreach (var otherCol in table.Columns.Where(oc => oc != col))
+                                    otherCol.IsGroupedBy = false;
+                            }
+                        };
+                        table.Columns.Add(col);
                     }
+                    table.ColumnsView?.Refresh();
                 }
                 
                 table.PropertyChanged += (s, e) => {
@@ -257,14 +258,12 @@ ORDER BY 1";
 
         private void IdentifyForeignKeys(TableSchema newTable)
         {
-            if (_dbManager == null) return;
-            using (var conn = _dbManager.CreateConnection())
+            if (_dbService == null) return;
+            var fks = _dbService.GetForeignKeys();
+            foreach (var fk in fks)
             {
-                var fks = conn.GetForeignKeys();
-                foreach (var fk in fks)
-                {
-                    var source = SelectedTables.FirstOrDefault(t => t.Name == fk.PkTable);
-                    var target = SelectedTables.FirstOrDefault(t => t.Name == fk.FkTable);
+                var source = SelectedTables.FirstOrDefault(t => t.Name == fk.PkTable);
+                var target = SelectedTables.FirstOrDefault(t => t.Name == fk.FkTable);
 
                     if (source != null && target != null)
                     {
@@ -300,7 +299,6 @@ ORDER BY 1";
                             });
                         }
                     }
-                }
             }
         }
 
@@ -361,6 +359,7 @@ ORDER BY 1";
             {
                 var saveModel = new ProjectSaveModel
                 {
+                    DbType = SelectedDbType,
                     Host = Host,
                     Database = Database,
                     User = User,
@@ -409,7 +408,8 @@ ORDER BY 1";
                     string json = File.ReadAllText(dlg.FileName);
                     var saveModel = JsonSerializer.Deserialize<ProjectSaveModel>(json);
                     if (saveModel == null) return;
-
+                    
+                    SelectedDbType = saveModel.DbType;
                     Host = saveModel.Host;
                     Database = saveModel.Database;
                     User = saveModel.User;
@@ -571,12 +571,9 @@ ORDER BY 1";
         {
             try
             {
-                if (_dbManager == null) { ErrorMessage = "Conecte-se ao banco primeiro."; return; }
-                using (var conn = _dbManager.CreateConnection())
-                {
-                    QueryResults = conn.GetRawQueryData(SqlQuery, "Resultados");
-                    ErrorMessage = $"Consulta executada com sucesso! ({QueryResults.Rows.Count} registros)";
-                }
+                if (_dbService == null) { ErrorMessage = "Conecte-se ao banco primeiro."; return; }
+                QueryResults = _dbService.GetRawQueryData(SqlQuery, "Resultados");
+                ErrorMessage = $"Consulta executada com sucesso! ({QueryResults.Rows.Count} registros)";
             }
             catch (Exception ex)
             {
@@ -588,107 +585,106 @@ ORDER BY 1";
         private DataSet BuildDataSet()
         {
             var ds = new DataSet("ReportData");
-            using (var conn = _dbManager.CreateConnection())
+            if (_dbService == null) return ds;
+
+            if (Relations.Count > 0 && SelectedTables.Count > 1)
             {
-                if (Relations.Count > 0 && SelectedTables.Count > 1)
+                // Relatório CONSOLIDADO (JOINs mais robustos)
+                var joinedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var sql = new StringBuilder("SELECT ");
+                var columns = new List<string>();
+
+                foreach (var table in SelectedTables)
                 {
-                    // Relatório CONSOLIDADO (JOINs mais robustos)
-                    var joinedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    var sql = new StringBuilder("SELECT ");
-                    var columns = new List<string>();
-
-                    foreach (var table in SelectedTables)
+                    var selCols = table.Columns.Where(c => c.IsSelected).ToList();
+                    foreach (var col in selCols)
                     {
-                        var selCols = table.Columns.Where(c => c.IsSelected).ToList();
-                        foreach (var col in selCols)
-                        {
-                            // Alias: Tabela_Coluna, usando aspas para Firebird
-                            columns.Add($"\"{table.Name}\".\"{col.Name}\" AS \"{table.Name}_{col.Name}\"");
-                        }
+                        // Alias: Tabela_Coluna
+                        columns.Add($"{_dbService.QuoteIdentifier(table.Name)}.{_dbService.QuoteIdentifier(col.Name)} AS {_dbService.QuoteIdentifier($"{table.Name}_{col.Name}")}");
                     }
-
-                    if (columns.Count == 0) return ds;
-
-                    sql.Append(string.Join(", ", columns));
-                    
-                    // Começamos com a primeira tabela selecionada
-                    var firstTable = SelectedTables[0];
-                    sql.Append($" FROM \"{firstTable.Name}\"");
-                    joinedTables.Add(firstTable.Name);
-
-                    // Lista de relações pendentes para processar
-                    var pendingRelations = new List<RelationSchema>(Relations);
-                    bool addedAny;
-
-                    do
-                    {
-                        addedAny = false;
-                        for (int i = pendingRelations.Count - 1; i >= 0; i--)
-                        {
-                            var rel = pendingRelations[i];
-                            string? sourceName = rel.SourceTable?.Name;
-                            string? targetName = rel.TargetTable?.Name;
-
-                            if (sourceName == null || targetName == null) continue;
-
-                            // Se a origem já está no SQL e o destino não, faz o JOIN
-                            if (joinedTables.Contains(sourceName) && !joinedTables.Contains(targetName))
-                            {
-                                sql.Append($" LEFT JOIN \"{targetName}\" ON \"{sourceName}\".\"{rel.SourceColumn}\" = \"{targetName}\".\"{rel.TargetColumn}\"");
-                                joinedTables.Add(targetName);
-                                pendingRelations.RemoveAt(i);
-                                addedAny = true;
-                            }
-                            // Se o destino já está no SQL e a origem não, faz o JOIN invertido
-                            else if (joinedTables.Contains(targetName) && !joinedTables.Contains(sourceName))
-                            {
-                                sql.Append($" LEFT JOIN \"{sourceName}\" ON \"{targetName}\".\"{rel.TargetColumn}\" = \"{sourceName}\".\"{rel.SourceColumn}\"");
-                                joinedTables.Add(sourceName);
-                                pendingRelations.RemoveAt(i);
-                                addedAny = true;
-                            }
-                        }
-                    } while (addedAny);
-
-                    // Filtros (WHERE)
-                    var filters = new List<string>();
-                    foreach (var table in SelectedTables)
-                    {
-                        if (!string.IsNullOrWhiteSpace(table.FilterCondition))
-                            filters.Add($"(\"{table.Name}\".{table.FilterCondition})");
-                    }
-                    if (filters.Count > 0) sql.Append(" WHERE " + string.Join(" AND ", filters));
-
-                    // Agrupamento/Ordenação (ORDER BY)
-                    var orderBy = new List<string>();
-                    foreach (var t in SelectedTables)
-                    {
-                        var g = t.Columns.FirstOrDefault(c => c.IsGroupedBy);
-                        if (g != null) orderBy.Add($"\"{t.Name}\".\"{g.Name}\"");
-                    }
-                    if (orderBy.Count > 0) sql.Append(" ORDER BY " + string.Join(", ", orderBy));
-
-                    var dtResult = conn.GetRawQueryData(sql.ToString(), "Dados_Relatorio");
-                    ds.Tables.Add(dtResult.Copy());
                 }
-                else
+
+                if (columns.Count == 0) return ds;
+
+                sql.Append(string.Join(", ", columns));
+                
+                // Começamos com a primeira tabela selecionada
+                var firstTable = SelectedTables[0];
+                sql.Append($" FROM {_dbService.QuoteIdentifier(firstTable.Name)}");
+                joinedTables.Add(firstTable.Name);
+
+                // Lista de relações pendentes para processar
+                var pendingRelations = new List<RelationSchema>(Relations);
+                bool addedAny;
+
+                do
                 {
-                    foreach (var table in SelectedTables)
+                    addedAny = false;
+                    for (int i = pendingRelations.Count - 1; i >= 0; i--)
                     {
-                        var selectedCols = table.Columns.Where(c => c.IsSelected).Select(c => c.Name).ToList();
-                        var groupByCol = table.Columns.FirstOrDefault(c => c.IsGroupedBy);
-                        if (groupByCol != null && !selectedCols.Contains(groupByCol.Name))
-                            selectedCols.Add(groupByCol.Name);
-                        if (selectedCols.Count == 0) continue; 
-            
-                        var dt = conn.GetTableData(table.Name, selectedCols, table.FilterCondition);
-                        if (groupByCol != null)
+                        var rel = pendingRelations[i];
+                        string? sourceName = rel.SourceTable?.Name;
+                        string? targetName = rel.TargetTable?.Name;
+
+                        if (sourceName == null || targetName == null) continue;
+
+                        // Se a origem já está no SQL e o destino não, faz o JOIN
+                        if (joinedTables.Contains(sourceName) && !joinedTables.Contains(targetName))
                         {
-                            dt.DefaultView.Sort = $"{groupByCol.Name} ASC";
-                            dt = dt.DefaultView.ToTable();
+                            sql.Append($" LEFT JOIN {_dbService.QuoteIdentifier(targetName)} ON {_dbService.QuoteIdentifier(sourceName)}.{_dbService.QuoteIdentifier(rel.SourceColumn)} = {_dbService.QuoteIdentifier(targetName)}.{_dbService.QuoteIdentifier(rel.TargetColumn)}");
+                            joinedTables.Add(targetName);
+                            pendingRelations.RemoveAt(i);
+                            addedAny = true;
                         }
-                        ds.Tables.Add(dt.Copy());
+                        // Se o destino já está no SQL e a origem não, faz o JOIN invertido
+                        else if (joinedTables.Contains(targetName) && !joinedTables.Contains(sourceName))
+                        {
+                            sql.Append($" LEFT JOIN {_dbService.QuoteIdentifier(sourceName)} ON {_dbService.QuoteIdentifier(targetName)}.{_dbService.QuoteIdentifier(rel.TargetColumn)} = {_dbService.QuoteIdentifier(sourceName)}.{_dbService.QuoteIdentifier(rel.SourceColumn)}");
+                            joinedTables.Add(sourceName);
+                            pendingRelations.RemoveAt(i);
+                            addedAny = true;
+                        }
                     }
+                } while (addedAny);
+
+                // Filtros (WHERE)
+                var filters = new List<string>();
+                foreach (var table in SelectedTables)
+                {
+                    if (!string.IsNullOrWhiteSpace(table.FilterCondition))
+                        filters.Add($"({_dbService.QuoteIdentifier(table.Name)}.{table.FilterCondition})");
+                }
+                if (filters.Count > 0) sql.Append(" WHERE " + string.Join(" AND ", filters));
+
+                // Agrupamento/Ordenação (ORDER BY)
+                var orderBy = new List<string>();
+                foreach (var t in SelectedTables)
+                {
+                    var g = t.Columns.FirstOrDefault(c => c.IsGroupedBy);
+                    if (g != null) orderBy.Add($"{_dbService.QuoteIdentifier(t.Name)}.{_dbService.QuoteIdentifier(g.Name)}");
+                }
+                if (orderBy.Count > 0) sql.Append(" ORDER BY " + string.Join(", ", orderBy));
+
+                var dtResult = _dbService.GetRawQueryData(sql.ToString(), "Dados_Relatorio");
+                ds.Tables.Add(dtResult.Copy());
+            }
+            else
+            {
+                foreach (var table in SelectedTables)
+                {
+                    var selectedCols = table.Columns.Where(c => c.IsSelected).Select(c => c.Name).ToList();
+                    var groupByCol = table.Columns.FirstOrDefault(c => c.IsGroupedBy);
+                    if (groupByCol != null && !selectedCols.Contains(groupByCol.Name))
+                        selectedCols.Add(groupByCol.Name);
+                    if (selectedCols.Count == 0) continue; 
+        
+                    var dt = _dbService.GetTableData(table.Name, selectedCols, table.FilterCondition);
+                    if (groupByCol != null)
+                    {
+                        dt.DefaultView.Sort = $"{groupByCol.Name} ASC";
+                        dt = dt.DefaultView.ToTable();
+                    }
+                    ds.Tables.Add(dt.Copy());
                 }
             }
             return ds;
