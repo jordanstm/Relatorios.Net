@@ -1,0 +1,32 @@
+{
+  "Host": "192.168.200.70",
+  "Database": "C:\\Ecosis\\Dados\\Prado.eco",
+  "User": "SYSDBA",
+  "Password": "masterkey",
+  "Tables": [
+    {
+      "Name": "TESTPRODUTOGERAL",
+      "X": 20,
+      "Y": 20,
+      "SelectedColumns": [
+        "CODIGO",
+        "DESCRICAO",
+        "GRUPOICMS",
+        "GENERONCM"
+      ],
+      "GroupByColumn": "",
+      "FilterCondition": ""
+    },
+    {
+      "Name": "TESTPRODUTO",
+      "X": 230,
+      "Y": 20,
+      "SelectedColumns": [
+        "ESTDISPONIVEL",
+        "GRUPO"
+      ],
+      "GroupByColumn": "",
+      "FilterCondition": ""
+    }
+  ]
+}

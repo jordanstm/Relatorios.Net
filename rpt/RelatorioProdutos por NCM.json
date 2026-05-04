@@ -1,0 +1,54 @@
+{
+  "Host": "192.168.200.70",
+  "Database": "C:\\Ecosis\\Dados\\Prado.eco",
+  "User": "SYSDBA",
+  "Password": "masterkey",
+  "Tables": [
+    {
+      "Name": "TESTPRODUTOGERAL",
+      "X": 20,
+      "Y": 20,
+      "SelectedColumns": [
+        "CODIGO",
+        "DESCRICAO",
+        "CLASSIFICACAOFISCAL"
+      ],
+      "GroupByColumn": "CLASSIFICACAOFISCAL",
+      "FilterCondition": "marca!=1 "
+    },
+    {
+      "Name": "TESTMARCA",
+      "X": 230,
+      "Y": 20,
+      "SelectedColumns": [
+        "DESCRICAO"
+      ],
+      "GroupByColumn": "",
+      "FilterCondition": ""
+    },
+    {
+      "Name": "TESTPRODUTO",
+      "X": 440,
+      "Y": 20,
+      "SelectedColumns": [
+        "ESTDISPONIVEL"
+      ],
+      "GroupByColumn": "",
+      "FilterCondition": "Estdisponivel\u003E0"
+    }
+  ],
+  "Relations": [
+    {
+      "SourceTable": "TESTMARCA",
+      "TargetTable": "TESTPRODUTOGERAL",
+      "SourceColumn": "CODIGO",
+      "TargetColumn": "MARCA"
+    },
+    {
+      "SourceTable": "TESTPRODUTOGERAL",
+      "TargetTable": "TESTPRODUTO",
+      "SourceColumn": "CODIGO",
+      "TargetColumn": "PRODUTO"
+    }
+  ]
+}

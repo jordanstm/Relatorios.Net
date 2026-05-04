@@ -1,0 +1,405 @@
+﻿<Window x:Class="Relatorio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Relatorio.ViewModels"
+        mc:Ignorable="d"
+        Title="Firebird Data Reporter - Dark Edition" Height="700" Width="1100"
+        Background="#1E1E1E" Foreground="White"
+        Icon="/app_icon.png">
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+    
+    <Window.Resources>
+        <Style TargetType="Control" x:Key="DarkControl">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+        </Style>
+        <Style TargetType="Button" BasedOn="{StaticResource DarkControl}">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="0,5"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource DarkControl}">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,2,0,8"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+        </Style>
+        <Style TargetType="TextBox" x:Key="SearchBoxStyle" BasedOn="{StaticResource DarkControl}">
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+        <Style TargetType="TabItem" x:Key="TabItemStyle">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#888888"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border Name="Border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#333333"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="BorderBrush" Value="#007ACC"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3E3E42"/>
+                                <Setter TargetName="Border" Property="Cursor" Value="Hand"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="GroupBox">
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+            <Setter Property="Foreground" Value="#888888"/>
+            <Setter Property="Margin" Value="0,10,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GroupBox">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Margin="5,0" Padding="0,2">
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                            </Border>
+                            <Border Grid.Row="1" BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2">
+                                <ContentPresenter Margin="5"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+            <Setter Property="RowBackground" Value="#252526"/>
+            <Setter Property="AlternatingRowBackground" Value="#2D2D2D"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#3F3F46"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#3F3F46"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="0,0,1,0">
+            <DockPanel Margin="15">
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Text="CONEXÃO FIREBIRD" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <TextBlock Text="Host / Servidor:"/>
+                    <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Caminho do Banco:"/>
+                    <TextBox Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Usuário:"/>
+                    <TextBox Text="{Binding User, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Senha:"/>
+                    <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Button Content="CONECTAR" Command="{Binding ConnectCommand}" 
+                            Background="#007ACC" Foreground="White" FontWeight="Bold" BorderThickness="0"/>
+                    
+                    <Separator Background="#3F3F46" Margin="0,15"/>
+                    
+                    <TextBlock Text="TABELAS DISPONÍVEIS" FontWeight="Bold" Foreground="White" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                             Tag="Pesquisar tabelas..."
+                             Margin="0,0,0,10"
+                             Style="{StaticResource SearchBoxStyle}"/>
+                </StackPanel>
+                
+                <ListBox x:Name="TablesList" ItemsSource="{Binding AvailableTablesView}" DisplayMemberPath="Name" 
+                         Background="#1E1E1E" Foreground="White" BorderThickness="1" BorderBrush="#3F3F46"
+                         MouseDoubleClick="TablesList_MouseDoubleClick"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Area with Tabs -->
+        <TabControl Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="0">
+            <!-- Tab 1: Visual Designer -->
+            <TabItem Header="DISEÑADOR VISUAL" Style="{StaticResource TabItemStyle}">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="#2D2D2D" Padding="10" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Salvar Projeto" Command="{Binding SaveProjectCommand}" Margin="0,0,10,0" Background="#2D2D30"/>
+                            <Button Content="Carregar Projeto" Command="{Binding LoadProjectCommand}" Margin="0,0,10,0" Background="#2D2D30"/>
+                            <Separator Width="2" Background="#3F3F46" Margin="10,0"/>
+                            <Button Content="Gerar Relatório" Command="{Binding GenerateReportCommand}" Margin="0,0,10,0"/>
+                            <Button Content="XML" Command="{Binding ExportXmlCommand}" Margin="0,0,5,0" Background="#2D2D30"/>
+                            <Button Content="CSV" Command="{Binding ExportCsvCommand}" Margin="0,0,5,0" Background="#2D2D30"/>
+                            <Button Content="EXCEL" Command="{Binding ExportExcelCommand}" Margin="0,0,5,0" Background="#2D2D30"/>
+                            <Button Content="PDF" Command="{Binding ExportPdfCommand}" Background="#007ACC" FontWeight="Bold"/>
+                            <TextBlock Text="Crie relações no canvas para relatórios consolidados." 
+                                       VerticalAlignment="Center" Margin="20,0,0,0" FontStyle="Italic" FontSize="10"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <Grid Background="#1E1E1E" Width="5000" Height="5000">
+                            <!-- Lines Layer -->
+                            <ItemsControl ItemsSource="{Binding Relations}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}" 
+                                              Stroke="#007ACC" StrokeThickness="2" StrokeDashArray="2 1"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Tables Layer -->
+                            <ItemsControl ItemsSource="{Binding SelectedTables}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas IsItemsHost="True"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#007ACC" BorderThickness="2" Background="#2D2D2D" CornerRadius="4" Width="180">
+                                            <StackPanel>
+                                                <Thumb Background="#3F3F46" Height="30" DragDelta="Table_DragDelta">
+                                                    <Thumb.Template>
+                                                        <ControlTemplate>
+                                                            <Grid Background="{TemplateBinding Background}">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White" 
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center" Margin="25,5,5,5"/>
+                                                                <Button Grid.Column="1" Content="X" Width="20" Height="20" Margin="0,0,5,0"
+                                                                        Background="Transparent" Foreground="#FF4B4B" BorderThickness="0"
+                                                                        FontSize="12" FontWeight="Bold" Cursor="Hand"
+                                                                        Command="{Binding DataContext.RemoveTableCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                            </Grid>
+                                                        </ControlTemplate>
+                                                    </Thumb.Template>
+                                                </Thumb>
+                                                <Border Background="#333337" Padding="5,2" BorderBrush="#3F3F46" BorderThickness="0,0,0,1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <TextBlock Text="🔍" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0" Opacity="0.5"/>
+                                                        <TextBox Grid.Column="1" Text="{Binding ColumnSearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                                                 FontSize="10" Background="Transparent" Foreground="White" BorderThickness="0"/>
+                                                    </Grid>
+                                                </Border>
+                                                <ItemsControl ItemsSource="{Binding ColumnsView}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="10,3">
+                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                                <Grid.ContextMenu>
+                                                                    <ContextMenu>
+                                                                        <MenuItem Header="Definir como Origem da Relação" Click="MenuItem_SetSource_Click"/>
+                                                                        <MenuItem Header="Definir como Destino da Relação" Click="MenuItem_SetTarget_Click"/>
+                                                                    </ContextMenu>
+                                                                </Grid.ContextMenu>
+                                                                <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="5,0"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding DataType}" FontSize="9" Foreground="#666666" VerticalAlignment="Center" Margin="5,0"/>
+                                                                <CheckBox Grid.Column="3" IsChecked="{Binding IsGroupedBy}" VerticalAlignment="Center">
+
+                                                                    <CheckBox.Template>
+                                                                        <ControlTemplate TargetType="CheckBox">
+                                                                            <Border Name="Marker" Background="Transparent" Padding="2" CornerRadius="2">
+                                                                                <TextBlock Text="G" FontSize="10" FontWeight="Bold" Foreground="{TemplateBinding Foreground}"/>
+                                                                            </Border>
+                                                                            <ControlTemplate.Triggers>
+                                                                                <Trigger Property="IsChecked" Value="True"><Setter TargetName="Marker" Property="Background" Value="#007ACC"/><Setter Property="Foreground" Value="White"/></Trigger>
+                                                                                <Trigger Property="IsChecked" Value="False"><Setter Property="Foreground" Value="#555555"/></Trigger>
+                                                                            </ControlTemplate.Triggers>
+                                                                        </ControlTemplate>
+                                                                    </CheckBox.Template>
+                                                                </CheckBox>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Border BorderBrush="#3F3F46" BorderThickness="0,1,0,0" Margin="5,5,5,2" Padding="2">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Filtro (WHERE):" Foreground="#666666" FontSize="9" Margin="5,0"/>
+                                                        <TextBox Text="{Binding FilterCondition, UpdateSourceTrigger=PropertyChanged}" 
+                                                                 Background="#1E1E1E" Foreground="White" BorderThickness="1" 
+                                                                 BorderBrush="#3F3F46" FontSize="10" Margin="5,2"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </ScrollViewer>
+                </DockPanel>
+            </TabItem>
+
+            <!-- Tab 2: Manual Relations Management -->
+            <TabItem Header="RELAÇÕES MANUAIS" Style="{StaticResource TabItemStyle}">
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                        <TextBlock Text="GERENCIAR RELAÇÕES CUSTOMIZADAS" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
+                        <TextBlock Text="Use o botão direito nas colunas do Designer Visual para definir as relações, ou gerencie-as aqui." 
+                                   FontStyle="Italic" Foreground="#888888" Margin="0,0,0,10"/>
+                        
+                        <Border Background="#333333" Padding="15" CornerRadius="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Margin="5">
+                                    <TextBlock Text="Tabela Origem" FontSize="10"/>
+                                    <TextBox x:Name="TxtSourceTable" Style="{StaticResource DarkControl}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5">
+                                    <TextBlock Text="Coluna Origem" FontSize="10"/>
+                                    <TextBox x:Name="TxtSourceColumn" Style="{StaticResource DarkControl}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Margin="5">
+                                    <TextBlock Text="Tabela Destino" FontSize="10"/>
+                                    <TextBox x:Name="TxtTargetTable" Style="{StaticResource DarkControl}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="3" Margin="5">
+                                    <TextBlock Text="Coluna Destino" FontSize="10"/>
+                                    <TextBox x:Name="TxtTargetColumn" Style="{StaticResource DarkControl}"/>
+                                </StackPanel>
+                                
+                                <Button Grid.Column="4" Content="ADICIONAR" VerticalAlignment="Bottom" Height="30" Width="100" Margin="5"
+                                        Background="#007ACC" Click="BtnAddManualRelation_Click"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding ManualRelations}" Background="#1E1E1E" BorderBrush="#3F3F46">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding SourceTable}" FontWeight="Bold" Foreground="#007ACC"/>
+                                        <TextBlock Text="."/>
+                                        <TextBlock Text="{Binding SourceColumn}" Foreground="#CCCCCC"/>
+                                        <TextBlock Text=" ➔ " Foreground="#888888"/>
+                                        <TextBlock Text="{Binding TargetTable}" FontWeight="Bold" Foreground="#007ACC"/>
+                                        <TextBlock Text="."/>
+                                        <TextBlock Text="{Binding TargetColumn}" Foreground="#CCCCCC"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Remover" Tag="{Binding}" Click="BtnRemoveManualRelation_Click"
+                                            Background="#442222" Foreground="#FF8888" BorderThickness="0" Padding="10,2" Margin="10,0,0,0"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </TabItem>
+
+
+            <!-- Tab 2: SQL Explorer -->
+            <TabItem Header="SQL EXPLORER" Style="{StaticResource TabItemStyle}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="200"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0">
+                        <TextBlock DockPanel.Dock="Top" Text="ESCREVA SUA CONSULTA SQL:" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding SqlQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                 AcceptsReturn="True" AcceptsTab="True" 
+                                 FontFamily="Consolas" FontSize="13"
+                                 Background="#000000" Foreground="#A9B7C6" 
+                                 Padding="10" BorderThickness="1" BorderBrush="#3F3F46"/>
+                    </DockPanel>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10">
+                        <Button Content="▶ EXECUTAR SQL" Command="{Binding ExecuteQueryCommand}" 
+                                Background="#28A745" Foreground="White" FontWeight="Bold" BorderThickness="0" Padding="20,8"/>
+                        <Button Content="Exportar CSV" Command="{Binding ExportCsvCommand}" CommandParameter="SQL" Margin="10,0,0,0" Background="#2D2D30"/>
+                        <Button Content="Exportar Excel" Command="{Binding ExportExcelCommand}" CommandParameter="SQL" Margin="10,0,0,0" Background="#2D2D30"/>
+                    </StackPanel>
+
+                    <GroupBox Grid.Row="2" Header="RESULTADOS" Foreground="#666666" BorderBrush="#3F3F46" BorderThickness="1">
+                        <DataGrid ItemsSource="{Binding QueryResults}" 
+                                  AutoGenerateColumns="True" 
+                                  IsReadOnly="True"
+                                  BorderThickness="0"
+                                  GridLinesVisibility="All">
+                        </DataGrid>
+                    </GroupBox>
+
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="1" Grid.ColumnSpan="2" Background="#007ACC" Foreground="White" Padding="5,2">
+            <StatusBarItem>
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="White" FontWeight="SemiBold"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
